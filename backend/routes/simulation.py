@@ -157,6 +157,53 @@ async def get_risk_profiles() -> dict:
     return {"profiles": profiles}
 
 
+@router.get("/market-parameters")
+async def get_market_parameters(lookback_years: int = 30) -> dict:
+    """
+    Get current market parameters derived from FRED economic data.
+    
+    Returns real-time market statistics used in Monte Carlo simulations:
+    - Stock return mean and standard deviation (from S&P 500)
+    - Bond return mean and standard deviation (from Treasury yields)
+    - Inflation mean and standard deviation (from CPI)
+    - Stock-bond correlation
+    
+    Parameters are calculated from historical FRED data over the specified
+    lookback period.
+    """
+    try:
+        from services.fred_data import get_market_parameters as fetch_params
+        params = fetch_params(lookback_years)
+        
+        return {
+            "lookback_years": lookback_years,
+            "parameters": {
+                "stocks": {
+                    "annual_return": params["stocks"]["mean"],
+                    "volatility": params["stocks"]["std"],
+                    "description": "Real (inflation-adjusted) S&P 500 returns",
+                },
+                "bonds": {
+                    "annual_return": params["bonds"]["mean"],
+                    "volatility": params["bonds"]["std"],
+                    "description": "Real (inflation-adjusted) 10-year Treasury returns",
+                },
+                "inflation": {
+                    "annual_rate": params["inflation"]["mean"],
+                    "volatility": params["inflation"]["std"],
+                    "description": "CPI-based inflation rate",
+                },
+                "correlation": {
+                    "stock_bond": params["correlation"],
+                    "description": "Correlation between stock and bond returns",
+                },
+            },
+            "source": "Federal Reserve Economic Data (FRED)",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch market data: {str(e)}")
+
+
 def _get_profile_description(profile: RiskProfile) -> str:
     """Get description for a risk profile."""
     descriptions = {

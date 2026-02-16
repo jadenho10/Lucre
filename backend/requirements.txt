@@ -1,5 +1,8 @@
 fastapi
 uvicorn[standard]
 numpy
+pandas
 pydantic
+python-dotenv
 SQLAlchemy
+fredapi

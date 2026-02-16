@@ -9,11 +9,12 @@ from schemas.simulation import (
     YearlyProjection,
     RiskProfile,
 )
+from services.fred_data import get_market_parameters
 
 
-# Historical return parameters (real returns, inflation-adjusted)
-# Based on long-term historical data
-ASSET_PARAMETERS = {
+# Default fallback parameters (real returns, inflation-adjusted)
+# Used if FRED API is unavailable
+DEFAULT_ASSET_PARAMETERS = {
     "stocks": {
         "mean": 0.07,      # 7% real return
         "std": 0.18,       # 18% standard deviation
@@ -47,11 +48,37 @@ class MonteCarloEngine:
     Simulates thousands of possible market futures using correlated
     stock/bond returns and inflation to compute probability of
     retirement success.
+    
+    Uses real market data from FRED API when available.
     """
     
-    def __init__(self, seed: Optional[int] = None):
-        """Initialize with optional random seed for reproducibility."""
+    def __init__(self, seed: Optional[int] = None, use_fred_data: bool = True, lookback_years: int = 30):
+        """
+        Initialize the Monte Carlo engine.
+        
+        Args:
+            seed: Random seed for reproducibility
+            use_fred_data: Whether to fetch real market data from FRED API
+            lookback_years: Years of historical data to use for parameters
+        """
         self.rng = np.random.default_rng(seed)
+        self.use_fred_data = use_fred_data
+        self.lookback_years = lookback_years
+        self._asset_parameters = None
+    
+    @property
+    def asset_parameters(self) -> dict:
+        """Get asset parameters, fetching from FRED if needed."""
+        if self._asset_parameters is None:
+            if self.use_fred_data:
+                try:
+                    self._asset_parameters = get_market_parameters(self.lookback_years)
+                except Exception as e:
+                    print(f"FRED API failed: {e}. Using default parameters.")
+                    self._asset_parameters = DEFAULT_ASSET_PARAMETERS
+            else:
+                self._asset_parameters = DEFAULT_ASSET_PARAMETERS
+        return self._asset_parameters
     
     def _get_stock_allocation(self, inputs: SimulationInput) -> float:
         """Get stock allocation from custom value or risk profile."""
@@ -67,15 +94,20 @@ class MonteCarloEngine:
         """
         Generate correlated stock, bond, and inflation returns.
         
+        Uses real market parameters from FRED API when available.
+        
         Returns:
             Tuple of (stock_returns, bond_returns, inflation) arrays
             Each array has shape (num_simulations, num_years)
         """
+        params = self.asset_parameters
+        
         # Generate correlated normal random variables
         # Using Cholesky decomposition for correlation
+        correlation = params["correlation"]
         correlation_matrix = np.array([
-            [1.0, ASSET_PARAMETERS["correlation"]],
-            [ASSET_PARAMETERS["correlation"], 1.0]
+            [1.0, correlation],
+            [correlation, 1.0]
         ])
         cholesky = np.linalg.cholesky(correlation_matrix)
         
@@ -85,20 +117,20 @@ class MonteCarloEngine:
         # Apply correlation
         correlated = np.einsum('ijk,lk->ijl', z, cholesky)
         
-        # Transform to actual returns
+        # Transform to actual returns using FRED-derived parameters
         stock_returns = (
-            ASSET_PARAMETERS["stocks"]["mean"] +
-            ASSET_PARAMETERS["stocks"]["std"] * correlated[:, :, 0]
+            params["stocks"]["mean"] +
+            params["stocks"]["std"] * correlated[:, :, 0]
         )
         bond_returns = (
-            ASSET_PARAMETERS["bonds"]["mean"] +
-            ASSET_PARAMETERS["bonds"]["std"] * correlated[:, :, 1]
+            params["bonds"]["mean"] +
+            params["bonds"]["std"] * correlated[:, :, 1]
         )
         
         # Generate inflation (independent)
         inflation = (
-            ASSET_PARAMETERS["inflation"]["mean"] +
-            ASSET_PARAMETERS["inflation"]["std"] * 
+            params["inflation"]["mean"] +
+            params["inflation"]["std"] * 
             self.rng.standard_normal((num_simulations, num_years))
         )
         
