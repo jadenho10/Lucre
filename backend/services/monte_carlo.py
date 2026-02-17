@@ -1,3 +1,4 @@
+import datetime
 import numpy as np
 from typing import Optional
 import time
@@ -91,15 +92,6 @@ class MonteCarloEngine:
         num_simulations: int,
         num_years: int,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Generate correlated stock, bond, and inflation returns.
-        
-        Uses real market parameters from FRED API when available.
-        
-        Returns:
-            Tuple of (stock_returns, bond_returns, inflation) arrays
-            Each array has shape (num_simulations, num_years)
-        """
         params = self.asset_parameters
         
         # Generate correlated normal random variables
@@ -127,7 +119,6 @@ class MonteCarloEngine:
             params["bonds"]["std"] * correlated[:, :, 1]
         )
         
-        # Generate inflation (independent)
         inflation = (
             params["inflation"]["mean"] +
             params["inflation"]["std"] * 
@@ -143,12 +134,7 @@ class MonteCarloEngine:
         bond_returns: np.ndarray,
         inflation: np.ndarray,
     ) -> np.ndarray:
-        """
-        Simulate portfolio trajectories across all paths.
         
-        Returns:
-            Array of shape (num_simulations, num_years + 1) with portfolio values
-        """
         num_simulations = inputs.num_simulations
         years_to_retirement = inputs.retirement_age - inputs.current_age
         years_in_retirement = inputs.life_expectancy - inputs.retirement_age
@@ -230,7 +216,7 @@ class MonteCarloEngine:
     ) -> list[YearlyProjection]:
         """Generate year-by-year projection data for charts."""
         projections = []
-        current_year = 2024  # Could make this dynamic
+        current_year = datetime.now().year
         
         for year_idx in range(portfolios.shape[1]):
             age = inputs.current_age + year_idx

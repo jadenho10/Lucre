@@ -1,10 +1,3 @@
-"""
-FRED API data service for fetching historical market data.
-
-Uses Federal Reserve Economic Data (FRED) to get real historical data
-for stocks, bonds, and inflation to parameterize Monte Carlo simulations.
-"""
-
 import os
 from typing import Optional
 from datetime import datetime, timedelta
@@ -14,10 +7,7 @@ import numpy as np
 from fredapi import Fred
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
-
-# FRED API key from environment
 FRED_API_KEY = os.getenv("FREDAPI")
 
 # FRED series IDs
@@ -39,13 +29,6 @@ FALLBACK_PARAMETERS = {
 
 
 class FredDataService:
-    """
-    Service for fetching and processing financial data from FRED.
-    
-    Calculates historical return statistics to parameterize
-    Monte Carlo simulations with real market data.
-    """
-    
     def __init__(self, api_key: Optional[str] = None):
         """Initialize with FRED API key."""
         self.api_key = api_key or FRED_API_KEY

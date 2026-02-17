@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routes.simulation import router as simulation_router
 from routes.data import router as data_router
+from routes.profiles import router as profiles_router
 
 app = FastAPI(
     title="Lucre - Financial Planning API",
@@ -21,6 +22,7 @@ app.add_middleware(
 # Include routers
 app.include_router(simulation_router, prefix="/api")
 app.include_router(data_router, prefix="/api")
+app.include_router(profiles_router, prefix="/api")
 
 
 @app.get("/")
