@@ -39,6 +39,7 @@ def root():
     }
 
 
+# health check endpoint if i need to scale
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}

@@ -216,7 +216,7 @@ class MonteCarloEngine:
     ) -> list[YearlyProjection]:
         """Generate year-by-year projection data for charts."""
         projections = []
-        current_year = datetime.now().year
+        current_year = datetime.datetime.now().year
         
         for year_idx in range(portfolios.shape[1]):
             age = inputs.current_age + year_idx
