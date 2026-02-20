@@ -56,3 +56,4 @@ def get_profile(profile: ProfileCreate):
         return {"message": "Profile retrieved successfully", "data": result.data[0]}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
